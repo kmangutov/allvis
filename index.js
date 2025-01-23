@@ -1,70 +1,122 @@
 // index.js
 
-// Replace "spy.json" with the symbol/file you want to display.
-// You can replicate/extend this logic for multiple files.
-const DATA_URL = 'data/json_output/spy.json';
+const PRICE_DATA_URL = 'data/json_output/spy.json'; // Your OHLC JSON
+const TWEET_COUNT = 5; // Number of tweets to display
 
 /**
- * Transforms the raw JSON records into the format expected by the Lightweight Charts library:
- *   [
- *     { time: 1673942400, open: 588.11, high: 588.29, low: 587.37, close: 587.79 },
- *     ...
- *   ]
- *
- * If you have other files (e.g., ethusdt.json) that have different column names (e.g., "Open time"),
- * create a similar transform function or a single unified approach that handles both columns.
+ * Convert raw JSON price data into the format required by the Lightweight Charts library:
+ * [
+ *   { time: 1673942400, open: 588.11, high: 588.29, low: 587.37, close: 587.79 },
+ *   ...
+ * ]
  */
-function transformData(rawData) {
-  return rawData.map(item => {
-    // For 'spy.json', columns are:
-    //   item.timestamp, item.Open, item.High, item.Low, item.Close
-    // Convert timestamp into a Unix timestamp (seconds).
-    const timeInSeconds = Math.floor(new Date(item.timestamp).getTime() / 1000);
+function transformPriceData(rawData) {
+  return rawData.map(item => ({
+    time:  Math.floor(new Date(item.timestamp).getTime() / 1000),
+    open:  item.Open,
+    high:  item.High,
+    low:   item.Low,
+    close: item.Close
+  }));
+}
 
-    return {
-      time:  timeInSeconds,
-      open:  item.Open,
-      high:  item.High,
-      low:   item.Low,
-      close: item.Close
-    };
+/**
+ * Filter tweets so we only get those within the OHLC data range.
+ * @param {Array} allTweets - The array of all tweet objects from `tweets.result`.
+ * @param {number} minTimeSec - Earliest Unix timestamp (in seconds) of OHLC data.
+ * @param {number} maxTimeSec - Latest Unix timestamp (in seconds) of OHLC data.
+ * @returns {Array} - Tweets in [minTimeSec, maxTimeSec] range.
+ */
+function filterTweetsByTimeRange(allTweets, minTimeSec, maxTimeSec) {
+  return allTweets.filter(t => {
+    const tweetTimeSec = Math.floor(new Date(t.timestamp).getTime() / 1000);
+    return tweetTimeSec >= minTimeSec && tweetTimeSec <= maxTimeSec;
   });
 }
 
-// Main function to load data and render the chart.
-async function loadChartData() {
+/**
+ * Randomly selects up to `count` tweets from an array of tweets.
+ * If the array is smaller than `count`, returns all tweets.
+ */
+function getRandomTweets(tweetsArray, count) {
+  // Shuffle the tweet array
+  const shuffled = tweetsArray.sort(() => 0.5 - Math.random());
+  // Return up to 'count' tweets
+  return shuffled.slice(0, count);
+}
+
+/**
+ * Convert tweets into chart marker objects.
+ * Lightweight Charts will display these markers on the candlestick series,
+ * and the `text` property appears in a tooltip on hover.
+ */
+function transformTweetsToMarkers(tweetArr) {
+  return tweetArr.map(t => ({
+    time:  Math.floor(new Date(t.timestamp).getTime() / 1000),
+    position: 'aboveBar',     // or 'belowBar'
+    color: 'blue',            // marker color
+    shape: 'circle',          // 'circle', 'square', 'arrowUp', etc.
+    text: `${t.author}: ${t.content}` // shown on hover
+  }));
+}
+
+// Main function to load chart data and render
+async function loadChart() {
   try {
-    const response = await fetch(DATA_URL);
+    // 1. Fetch the OHLC price data
+    const response = await fetch(PRICE_DATA_URL);
     if (!response.ok) {
-      throw new Error(`Network response was not ok. Status: ${response.status}`);
+      throw new Error(`Failed to fetch price data: ${response.status}`);
     }
 
-    const data = await response.json();
-    const chartData = transformData(data);
+    const rawPriceData = await response.json();
+    // Transform the data
+    const priceData = transformPriceData(rawPriceData);
 
-    // Create the chart
+    // (Optional) Ensure the price data is sorted by time
+    priceData.sort((a, b) => a.time - b.time);
+
+    // 2. Find min and max timestamps from the loaded price data
+    const minTimeSec = priceData[0].time;
+    const maxTimeSec = priceData[priceData.length - 1].time;
+
+    // 3. Filter tweets within the time range
+    const allTweets = tweets.result; // from smart_money.js (global var)
+    const tweetsInRange = filterTweetsByTimeRange(allTweets, minTimeSec, maxTimeSec);
+
+    // 4. Randomly select up to TWEET_COUNT tweets
+    const selectedTweets = getRandomTweets(tweetsInRange, TWEET_COUNT);
+
+    // 5. Transform them into chart markers
+    const tweetMarkers = transformTweetsToMarkers(selectedTweets);
+
+    // 6. Create the chart
     const chartContainer = document.getElementById('chart');
     const chart = LightweightCharts.createChart(chartContainer, {
       layout: {
         background: { type: 'Solid', color: '#FFFFFF' },
-        textColor: '#333'
+        textColor: '#333',
       },
       grid: {
         vertLines: { color: '#eee' },
-        horzLines: { color: '#eee' }
+        horzLines: { color: '#eee' },
       },
       localization: {
-        dateFormat: 'yyyy-MM-dd'
-      }
+        dateFormat: 'yyyy-MM-dd',
+      },
     });
 
-    const candlestickSeries = chart.addCandlestickSeries();
-    candlestickSeries.setData(chartData);
+    // 7. Add candlestick series & set data
+    const candleSeries = chart.addCandlestickSeries();
+    candleSeries.setData(priceData);
+
+    // 8. Overlay tweet markers on the series
+    candleSeries.setMarkers(tweetMarkers);
 
   } catch (err) {
-    console.error("Error loading or rendering chart data:", err);
+    console.error('Error loading or rendering chart:', err);
   }
 }
 
 // Initialize when the page loads
-window.addEventListener('DOMContentLoaded', loadChartData);
+window.addEventListener('DOMContentLoaded', loadChart);

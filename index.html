@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>OHLC Charts</title>
-  
-  <!-- You can adjust the width/height in CSS or inline style -->
+  <title>OHLC Chart with Tweets</title>
   <style>
+    /* Basic styling for the chart container */
     #chart {
       width: 800px;
       height: 600px;
@@ -14,13 +13,18 @@
   </style>
 </head>
 <body>
-  <h1>OHLC Chart Example (SPY)</h1>
+  <h1>OHLC Chart (SPY) + Tweets Overlay</h1>
+
+  <!-- Chart container -->
   <div id="chart"></div>
 
   <!-- TradingView Lightweight Charts library (standalone version) -->
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-  
-  <!-- Your custom script -->
+
+  <!-- Global tweets variable (smart_money.js) -->
+  <script src="data/twitter/smart_money.js"></script>
+
+  <!-- Main logic for loading data and rendering chart -->
   <script src="index.js"></script>
 </body>
 </html>
