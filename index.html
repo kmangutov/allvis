@@ -1,30 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>OHLC Chart with Tweets</title>
-  <style>
-    /* Basic styling for the chart container */
-    #chart {
-      width: 800px;
-      height: 600px;
-      margin: 0 auto;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Data with Tweets</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>OHLC Chart (SPY) + Tweets Overlay</h1>
-
-  <!-- Chart container -->
   <div id="chart"></div>
-
-  <!-- TradingView Lightweight Charts library (standalone version) -->
+  <div id="controls">
+    <label for="impact-slider">Impact Threshold:</label>
+    <input type="range" id="impact-slider" min="0" max="1" step="0.1" value="0.5">
+    <span id="impact-value">0.5</span>
+  </div>
+  <!-- TradingView Lightweight Charts -->
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-
-  <!-- Global tweets variable (smart_money.js) -->
-  <script src="data/twitter_raw/smart_money.js"></script>
-
-  <!-- Main logic for loading data and rendering chart -->
+  <!-- Tweets Data -->
+  <!--<script src="data/twitter_labelled/labelled_tweets_output_prod3.js"></script>-->
+  <script src="data/twitter_labelled/labelled_tweets_output_wip.js"></script>
+  <!-- Helper Functions -->
+  <script src="utils.js"></script>
+  <!-- Main Logic -->
   <script src="index.js"></script>
 </body>
 </html>
